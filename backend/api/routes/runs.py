@@ -3,8 +3,6 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
 
-from backend.api.dependencies import require_owner
-from backend.core.settings import Settings, get_settings
 from backend.db.models import Run
 from backend.events.journal import read_run_events
 from backend.infra.database import get_session
@@ -18,23 +16,20 @@ from backend.schemas.runs import (
 )
 
 
-router = APIRouter(prefix="/api/runs", tags=["runs"])
+router = APIRouter(prefix="/v1/runs", tags=["runs"])
 
 
 @router.post("", response_model=RunCreateResponse)
 def create(
     body: RunCreateRequest,
     response: Response,
-    owner_id: str = Depends(require_owner),
     session: Session = Depends(get_session),
-    settings: Settings = Depends(get_settings),
 ) -> dict:
     run, created = create_run(
         session,
-        owner_id=owner_id,
+        thread_id=body.thread_id,
         question=body.question,
         idempotency_key=body.idempotency_key,
-        settings=settings,
     )
     response.status_code = 201 if created else 200
     return {"created": created, "run": run}
@@ -44,10 +39,9 @@ def create(
 def runs(
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
-    owner_id: str = Depends(require_owner),
     session: Session = Depends(get_session),
 ) -> dict:
-    items, total = list_runs(session, owner_id=owner_id, offset=offset, limit=limit)
+    items, total = list_runs(session, offset=offset, limit=limit)
     return {"items": items, "offset": offset, "limit": limit, "total": total}
 
 
@@ -56,16 +50,9 @@ def events(
     run_id: str,
     after: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=100),
-    owner_id: str = Depends(require_owner),
     session: Session = Depends(get_session),
 ) -> dict:
-    items = read_run_events(
-        session,
-        owner_id=owner_id,
-        run_id=run_id,
-        after=after,
-        limit=limit,
-    )
+    items = read_run_events(session, run_id=run_id, after=after, limit=limit)
     return {
         "items": [
             {
@@ -84,9 +71,5 @@ def events(
 
 
 @router.get("/{run_id}", response_model=RunResponse)
-def run(
-    run_id: str,
-    owner_id: str = Depends(require_owner),
-    session: Session = Depends(get_session),
-) -> Run:
-    return get_run(session, owner_id=owner_id, run_id=run_id)
+def run(run_id: str, session: Session = Depends(get_session)) -> Run:
+    return get_run(session, run_id=run_id)

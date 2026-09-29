@@ -1,31 +1,38 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from typing import Literal
+
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
-from backend.api.dependencies import require_owner
-from backend.core.settings import Settings, get_settings
 from backend.infra.database import get_session
-from backend.model_control.service import list_models, run_model_check
-from backend.schemas.models import ModelCheckResponse, ModelsResponse
+from backend.model_control.service import assign_role, control_plane, create_profile, delete_profile, update_profile
+from backend.schemas.models import ModelAssignmentRequest, ModelControlPlaneResponse, ModelDeleteResponse, ModelProfileRequest
 
 
-router = APIRouter(prefix="/api/models", tags=["models"])
+router = APIRouter(prefix="/v1/models", tags=["models"])
 
 
-@router.get("", response_model=ModelsResponse)
-def models(
-    owner_id: str = Depends(require_owner),
-    session: Session = Depends(get_session),
-    settings: Settings = Depends(get_settings),
-) -> dict:
-    return list_models(session, owner_id=owner_id, settings=settings)
+@router.get("", response_model=ModelControlPlaneResponse)
+def models(session: Session = Depends(get_session)) -> dict:
+    return control_plane(session)
 
 
-@router.post("/check", response_model=ModelCheckResponse)
-def check_models(
-    owner_id: str = Depends(require_owner),
-    session: Session = Depends(get_session),
-    settings: Settings = Depends(get_settings),
-) -> dict:
-    return run_model_check(session, owner_id=owner_id, settings=settings)
+@router.post("", response_model=ModelControlPlaneResponse, status_code=status.HTTP_201_CREATED)
+def create_model(request: ModelProfileRequest, session: Session = Depends(get_session)) -> dict:
+    return create_profile(session, request.model_dump())
+
+
+@router.put("/assignments/{role}", response_model=ModelControlPlaneResponse)
+def assign_model(role: Literal["answer", "fast", "grader"], request: ModelAssignmentRequest, session: Session = Depends(get_session)) -> dict:
+    return assign_role(session, role, request.profile_id)
+
+
+@router.put("/{profile_id}", response_model=ModelControlPlaneResponse)
+def update_model(profile_id: str, request: ModelProfileRequest, session: Session = Depends(get_session)) -> dict:
+    return update_profile(session, profile_id, request.model_dump())
+
+
+@router.delete("/{profile_id}", response_model=ModelDeleteResponse)
+def delete_model(profile_id: str, session: Session = Depends(get_session)) -> dict:
+    return delete_profile(session, profile_id)

@@ -28,5 +28,5 @@
 调研和网络搜索等任务优先使用 agent-reach skill。
 
 决策优先级：
- 1. `./tmp/icey1287__SuperMew/`。
- 2. `./tmp/daysPlan/PRD.md`。
+ 1. `./tmp/ragproof-knowledge-base/v1-knowledge-base-capabilities.md`
+ 2. `./tmp/icey1287__SuperMew/`。

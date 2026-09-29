@@ -26,25 +26,16 @@ def append_run_created(session: Session, run: Run) -> RunEvent:
 def read_run_events(
     session: Session,
     *,
-    owner_id: str,
     run_id: str,
     after: int,
     limit: int,
 ) -> list[RunEvent]:
-    owned_run_id = session.scalar(
-        select(Run.id).where(Run.owner_id == owner_id, Run.id == run_id)
-    )
-    if owned_run_id is None:
+    if session.get(Run, run_id) is None:
         raise ApiError("NOT_FOUND", "Run 不存在", 404)
     return list(
         session.scalars(
             select(RunEvent)
-            .join(Run, Run.id == RunEvent.run_id)
-            .where(
-                Run.owner_id == owner_id,
-                Run.id == run_id,
-                RunEvent.sequence > after,
-            )
+            .where(RunEvent.run_id == run_id, RunEvent.sequence > after)
             .order_by(RunEvent.sequence.asc())
             .limit(limit)
         )

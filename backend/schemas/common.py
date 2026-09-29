@@ -14,7 +14,3 @@ class HealthResponse(ResponseSchema):
 class ReadyResponse(ResponseSchema):
     status: str
     database: str
-
-
-class MeResponse(ResponseSchema):
-    owner_id: str

@@ -10,6 +10,7 @@ from backend.schemas.retrieval import RetrievalSnapshot
 
 
 class RunCreateRequest(ResponseSchema):
+    thread_id: str = Field(pattern=r"^thread_[0-9a-f]{32}$")
     question: str = Field(min_length=1, max_length=4000)
     idempotency_key: str = Field(min_length=1, max_length=128)
 
@@ -26,10 +27,13 @@ class RunCreateRequest(ResponseSchema):
 
 class RunResponse(ResponseSchema):
     id: str
+    thread_id: str
     question: str
     status: str
     config_snapshot: dict[str, Any]
     retrieval_snapshot: RetrievalSnapshot
+    model_catalog_hash: str
+    model_snapshot_json: dict[str, Any]
     created_at: datetime
     updated_at: datetime
 
